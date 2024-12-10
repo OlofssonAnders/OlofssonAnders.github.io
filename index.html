@@ -1,1 +1,126 @@
-HelloWorld
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Log</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phone Log System (Static)</h1>
+
+    <form id="logForm">
+        <label for="site_id">Site ID:</label>
+        <input type="text" id="site_id" name="site_id" required><br>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required><br>
+        <label for="login_base">Login Base:</label>
+        <input type="text" id="login_base" name="login_base" required><br>
+        <label for="url">URL:</label>
+        <input type="text" id="url" name="url" required><br>
+        <label for="latitude">Latitude:</label>
+        <input type="text" id="latitude" name="latitude" required><br>
+        <label for="longitude">Longitude:</label>
+        <input type="text" id="longitude" name="longitude" required><br>
+        <button type="submit">Submit</button>
+    </form>
+
+    <button id="resetLog">Reset Log</button>
+    <button id="downloadKML">Download KML</button>
+
+    <pre id="logOutput" class="hidden"></pre>
+
+    <script>
+        // Helper to save logs in localStorage
+        const saveLogs = (logs) => {
+            localStorage.setItem('phoneLog', JSON.stringify(logs));
+        };
+
+        // Helper to load logs from localStorage
+        const loadLogs = () => {
+            return JSON.parse(localStorage.getItem('phoneLog')) || [];
+        };
+
+        // Add new log entry
+        document.getElementById('logForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const site_id = document.getElementById('site_id').value;
+            const name = document.getElementById('name').value;
+            const login_base = document.getElementById('login_base').value;
+            const url = document.getElementById('url').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            const logs = loadLogs();
+
+            // Check for duplicate site_id
+            if (logs.some((log) => log.site_id === site_id)) {
+                alert('Duplicate Site ID! Entry not saved.');
+                return;
+            }
+
+            // Add new log entry
+            logs.push({ site_id, name, login_base, url, latitude, longitude });
+            saveLogs(logs);
+
+            alert('Entry saved successfully!');
+            e.target.reset();
+        });
+
+        // Reset logs
+        document.getElementById('resetLog').addEventListener('click', () => {
+            localStorage.removeItem('phoneLog');
+            alert('Log cleared.');
+        });
+
+        // Generate and download KML file
+        document.getElementById('downloadKML').addEventListener('click', () => {
+            const logs = loadLogs();
+            if (logs.length === 0) {
+                alert('No logs to download.');
+                return;
+            }
+
+            let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>\n`;
+
+            logs.forEach((log) => {
+                if (log.latitude === "None" || log.longitude === "None") return;
+
+                kmlContent += `
+    <Placemark>
+        <name>${log.name}</name>
+        <description>${log.url}</description>
+        <Point>
+            <coordinates>${log.longitude},${log.latitude},0</coordinates>
+        </Point>
+    </Placemark>\n`;
+            });
+
+            kmlContent += `</Document>
+</kml>`;
+
+            // Create a downloadable KML file
+            const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'phonelog.kml';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
